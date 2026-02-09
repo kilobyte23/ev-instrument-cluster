@@ -14,13 +14,7 @@ void EVVehicleData::setSpeed(float speed)
     emit speedChanged();
 }
 
-void EVVehicleData::setHeading(float heading)
-{
-    if (qFuzzyCompare(m_heading, heading))
-        return;
-    m_heading = heading;
-    emit headingChanged();
-}
+
 
 void EVVehicleData::setOdometer(float odometer)
 {

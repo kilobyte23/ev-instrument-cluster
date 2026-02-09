@@ -11,7 +11,6 @@ class EVVehicleData : public QObject
 
     // Motion
     Q_PROPERTY(float speed READ speed WRITE setSpeed NOTIFY speedChanged)
-    Q_PROPERTY(float heading READ heading WRITE setHeading NOTIFY headingChanged)
     Q_PROPERTY(float odometer READ odometer WRITE setOdometer NOTIFY odometerChanged)
     Q_PROPERTY(float tripDistanceA READ tripDistanceA WRITE setTripDistanceA NOTIFY tripDistanceAChanged)
     Q_PROPERTY(float tripDistanceB READ tripDistanceB WRITE setTripDistanceB NOTIFY tripDistanceBChanged)
@@ -97,7 +96,6 @@ public:
 
     // Getters
     float speed() const { return m_speed; }
-    float heading() const { return m_heading; }
     float odometer() const { return m_odometer; }
     float tripDistanceA() const { return m_tripDistanceA; }
     float tripDistanceB() const { return m_tripDistanceB; }
@@ -148,7 +146,6 @@ public:
 public slots:
     // Setters
     void setSpeed(float speed);
-    void setHeading(float heading);
     void setOdometer(float odometer);
     void setTripDistanceA(float tripDistanceA);
     void setTripDistanceB(float tripDistanceB);
@@ -201,7 +198,6 @@ public slots:
 
 signals:
     void speedChanged();
-    void headingChanged();
     void odometerChanged();
     void tripDistanceAChanged();
     void tripDistanceBChanged();
@@ -251,7 +247,6 @@ signals:
 
 private:
     float m_speed = 0.0f;
-    float m_heading = 0.0f;
     float m_odometer = 0.0f;
     float m_tripDistanceA = 0.0f;
     float m_tripDistanceB = 0.0f;
