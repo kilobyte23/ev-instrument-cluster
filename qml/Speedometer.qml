@@ -53,9 +53,10 @@ Item {
         ShapePath {
             fillColor: "transparent"
             strokeColor: {
-                if (animatedSpeed < 60) return Style.primary // Eco
-                if (animatedSpeed < 100) return Style.secondary // Normal
-                return Style.danger // Fast
+                var speedPercent = Math.min(animatedSpeed, maxSpeed) / maxSpeed;
+                if (speedPercent < 0.5) return Style.primary;  // Cyan
+                else if (speedPercent < 0.8) return Style.secondary; // Purple
+                else return Style.critical; // Red
             }
             strokeWidth: 20
             capStyle: ShapePath.RoundCap
@@ -66,7 +67,6 @@ Item {
                 radiusX: root.width / 2 - 20
                 radiusY: root.height / 2 - 20
                 startAngle: 135
-                // Calculate sweep based on speed
                 sweepAngle: 270 * (Math.min(animatedSpeed, maxSpeed) / maxSpeed)
             }
             
@@ -83,7 +83,7 @@ Item {
             color: Style.textPrimary
             font.pixelSize: Style.fontSizeHuge
             font.bold: true
-            font.family: Style.fontFamily
+            font.family: Style.monoFont  // Monospace to prevent jitter
             anchors.horizontalCenter: parent.horizontalCenter
         }
         

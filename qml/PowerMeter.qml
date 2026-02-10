@@ -104,7 +104,7 @@ Item {
 
         ShapePath {
             fillColor: "transparent"
-            strokeColor: Style.regenColor
+            strokeColor: Style.accent // Green for regen
             strokeWidth: 15
             capStyle: ShapePath.FlatCap
 
@@ -125,7 +125,7 @@ Item {
         color: animatedPower < 0 ? Style.regenColor : Style.textPrimary
         font.pixelSize: 32
         font.bold: true
-        font.family: Style.fontFamily
+        font.family: Style.monoFont  // Monospace to prevent jitter
     }
     
     Text {

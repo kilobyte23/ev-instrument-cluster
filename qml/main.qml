@@ -59,7 +59,7 @@ Window {
         
         Text {
             anchors.centerIn: parent
-            text: "EV SYSTEM REQUEST" 
+            text: "WEZU TECHNOLOGIES" 
             color: Style.textPrimary
             font.pixelSize: 32
             font.bold: true

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import "."
 
 Item {
     id: root
@@ -34,22 +35,37 @@ Item {
             text: odometer.toFixed(1) + " km"
             color: "white"
             font.pixelSize: 18
+            font.family: Style.monoFont
+            horizontalAlignment: Text.AlignLeft
             Layout.bottomMargin: 10
+            Layout.preferredWidth: 120  // Fixed width
         }
 
         RowLayout {
             Layout.fillWidth: true
             
             ColumnLayout {
+                Layout.preferredWidth: 80  // Fixed width
                 Text { text: "TRIP A"; color: "#888888"; font.pixelSize: 10 }
-                Text { text: tripA.toFixed(1) + " km"; color: "white"; font.pixelSize: 14 }
+                Text { 
+                    text: tripA.toFixed(1) + " km"
+                    color: "white"
+                    font.pixelSize: 14
+                    font.family: Style.monoFont
+                }
             }
             
             Item { Layout.fillWidth: true } // Spacer
             
             ColumnLayout {
+                Layout.preferredWidth: 100  // Fixed width
                 Text { text: "AVG"; color: "#888888"; font.pixelSize: 10 }
-                Text { text: efficiency.toFixed(1) + " Wh/km"; color: "white"; font.pixelSize: 14 }
+                Text { 
+                    text: efficiency.toFixed(1) + " Wh/km"
+                    color: "white"
+                    font.pixelSize: 14
+                    font.family: Style.monoFont
+                }
             }
         }
     }
