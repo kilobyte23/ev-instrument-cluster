@@ -46,6 +46,55 @@ void EVVehicleData::setBatterySoc(float batterySoc)
         return;
     m_batterySoc = batterySoc;
     emit batterySocChanged();
+    
+    // Intelligent range calculation with smoothing
+    float batteryCapacityKwh = 77.4f;  // 4W default
+    float availableEnergyKwh = (m_batterySoc / 100.0f) * batteryCapacityKwh;
+    
+    // Update smoothed efficiency with exponential moving average
+    // Only update when we have valid consumption data (ignore during regen)
+    if (m_averageConsumption > 50.0f && m_averageConsumption < 500.0f) {
+        // Alpha = 0.1 means 10% new value, 90% previous (slow, stable)
+        float alpha = 0.1f;
+        m_smoothedEfficiency = alpha * m_averageConsumption + (1.0f - alpha) * m_smoothedEfficiency;
+    }
+    
+    // Use smoothed efficiency for range calculation
+    float efficiencyWhPerKm = m_smoothedEfficiency;
+    
+    // Base range calculation: available energy / efficiency
+    float baseRange = (availableEnergyKwh * 1000.0f) / efficiencyWhPerKm;
+    
+    // Temperature compensation factor
+    float tempFactor = 1.0f;
+    if (m_batteryTempAvg < 0) {
+        tempFactor = 0.70f;  // 30% reduction in extreme cold
+    } else if (m_batteryTempAvg < 10) {
+        tempFactor = 0.85f;  // 15% reduction in cold
+    } else if (m_batteryTempAvg < 20) {
+        tempFactor = 0.95f;  // 5% reduction
+    } else if (m_batteryTempAvg > 45) {
+        tempFactor = 0.85f;  // 15% reduction in high heat
+    } else if (m_batteryTempAvg > 35) {
+        tempFactor = 0.95f;  // Slight reduction
+    }
+    
+    // Apply temperature compensation
+    float calculatedRange = baseRange * tempFactor;
+    
+    // Smooth the range output itself (prevents jumps)
+    // Alpha = 0.2 means 20% new value, 80% previous
+    if (m_previousRange > 0) {
+        calculatedRange = 0.2f * calculatedRange + 0.8f * m_previousRange;
+    }
+    m_previousRange = calculatedRange;
+    
+    // Reserve last 5% of battery
+    if (m_batterySoc < 5.0f) {
+        calculatedRange = 0.0f;
+    }
+    
+    setEstimatedRange(calculatedRange);
 }
 
 void EVVehicleData::setBatteryVoltage(float batteryVoltage)
@@ -366,7 +415,16 @@ void EVVehicleData::updateFromSimulation(const QVariantMap& data)
     if (data.contains("power")) setPowerOutput(data["power"].toFloat());
     if (data.contains("range")) setEstimatedRange(data["range"].toFloat());
     if (data.contains("motor_temp")) setMotorTemp(data["motor_temp"].toFloat());
+    if (data.contains("motor_rpm")) setMotorRpm(data["motor_rpm"].toFloat());
+    if (data.contains("battery_voltage")) setBatteryVoltage(data["battery_voltage"].toFloat());
+    if (data.contains("battery_current")) setBatteryCurrent(data["battery_current"].toFloat());
+    if (data.contains("battery_temp")) setBatteryTempAvg(data["battery_temp"].toFloat());
     if (data.contains("odometer")) setOdometer(data["odometer"].toFloat());
+    if (data.contains("trip_distance_a")) setTripDistanceA(data["trip_distance_a"].toFloat());
+    if (data.contains("soh")) setBatterySoh(data["soh"].toFloat());
+    if (data.contains("efficiency")) setAverageConsumption(data["efficiency"].toFloat());
+    if (data.contains("ready")) setReadyToDrive(data["ready"].toBool());
+    if (data.contains("charging")) setChargingActive(data["charging"].toBool());
     
     // Warnings
     if (data.contains("bms_warning")) setBmsWarning(data["bms_warning"].toBool());

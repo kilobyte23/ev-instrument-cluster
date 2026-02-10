@@ -245,6 +245,7 @@ signals:
     void nightModeChanged();
     void fullScreenMapChanged();
 
+
 private:
     float m_speed = 0.0f;
     float m_odometer = 0.0f;
@@ -294,6 +295,10 @@ private:
     float m_heading = 0.0f;
     bool m_nightMode = true; // Default to night/dark mode
     bool m_fullScreenMap = false;
+    
+    // Range calculation smoothing
+    float m_previousRange = 0.0f;
+    float m_smoothedEfficiency = 180.0f;  // Wh/km
 };
 
 #endif // EVVEHICLEDATA_H
