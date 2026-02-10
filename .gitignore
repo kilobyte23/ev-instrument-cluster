@@ -1,0 +1,10 @@
+build/
+*.log
+.DS_Store
+__pycache__/
+*.o
+*.obj
+*.exe
+*.pyc
+*.user
+logs/

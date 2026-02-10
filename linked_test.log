@@ -1,2 +1,0 @@
-qt.qpa.fonts: Populating font family aliases took 96 ms. Replace uses of missing font family "Inter" with one that exists to avoid this cost. 
-Failed to bind Simulation Receiver socket port 5555

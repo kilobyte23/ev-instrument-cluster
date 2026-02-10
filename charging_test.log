@@ -1,4 +1,0 @@
-qt.qpa.fonts: Populating font family aliases took 83 ms. Replace uses of missing font family "Inter" with one that exists to avoid this cost. 
-Simulation Receiver listening on port 5555
-file:///Users/mohithavala/.gemini/antigravity/scratch/ev-instrument-cluster/qml/main.qml:103: ReferenceError: root is not defined
-file:///Users/mohithavala/.gemini/antigravity/scratch/ev-instrument-cluster/qml/main.qml:103: ReferenceError: root is not defined
