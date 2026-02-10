@@ -29,10 +29,15 @@ Choose from 6 realistic driving scenarios:
 
 - **City Commute** - Stop-and-go traffic (20-60 km/h)
 - **Highway Cruise** - Steady high-speed (100-120 km/h)
-- **Aggressive Driving** - Rapid acceleration (0-140 km/h)
+- **Aggressive Driving** - Rapid acceleration (0-140 km/h), hard braking
 - **Eco Mode** - Efficient gentle driving (55-70 km/h)
 - **Mountain Drive** - Hills with regenerative braking
 - **Track Day** - Maximum performance (60-160 km/h)
+- **Battery Overheat** - Simulates thermal runaway risk
+- **Motor Overheat** - Sustained hill climb triggering warnings
+- **Degraded Battery** - Simulates old battery (low SoH)
+- **Critical Low Battery** - Limp mode behavior < 10% SoC
+- **HV System Fault** - Simulates isolation failure and shutdown
 
 ### Controls
 
