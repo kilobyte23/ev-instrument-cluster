@@ -1,0 +1,41 @@
+import QtQuick
+import QtQuick.Layouts
+import "."
+
+Item {
+    id: root
+    
+    // Bike Cluster (Simpler, focused on speed and essential info)
+    
+    ColumnLayout {
+        anchors.centerIn: parent
+        spacing: 20
+        
+        Speedometer {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredWidth: 400
+            Layout.preferredHeight: 400
+            
+            // Assume Speedometer has a 'speed' property, usually bound to VehicleData in internal implementation
+            // or we might need to bind it if it exposes an alias. 
+            // Checking GaugeCluster, it binds: speed: root.speed where root.speed is VehicleData.speed.
+            // Let's assume Speedometer reads VehicleData itself or we need to pass it.
+            // GaugeCluster binds it explicitly. Let's do the same if we can access VehicleData.
+        }
+        
+        RowLayout {
+            Layout.alignment: Qt.AlignHCenter
+            spacing: 40
+            
+            BatteryDisplay {
+                Layout.preferredWidth: 200
+                Layout.preferredHeight: 100
+            }
+            
+            TripComputer {
+                Layout.preferredWidth: 200
+                Layout.preferredHeight: 100
+            }
+        }
+    }
+}
