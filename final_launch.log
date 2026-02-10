@@ -1,0 +1,4 @@
+qt.qpa.fonts: Populating font family aliases took 84 ms. Replace uses of missing font family "Inter" with one that exists to avoid this cost. 
+file:///Users/mohithavala/.gemini/antigravity/scratch/ev-instrument-cluster/qml/Cluster4W.qml:85:13: Type Speedometer unavailable
+file:///Users/mohithavala/.gemini/antigravity/scratch/ev-instrument-cluster/qml/Speedometer.qml:71:13: Cannot assign to non-existent property "anchors"
+Simulation Receiver listening on port 5555

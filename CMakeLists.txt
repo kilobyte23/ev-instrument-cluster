@@ -32,9 +32,14 @@ set(PROJECT_SOURCES
     qml/ChargingScreen.qml
     qml/MapView.qml
     qml/WarningLights.qml
+    qml/WarningOverlay.qml
     qml/TripComputer.qml
     qml/GaugeCluster.qml
     qml/BatteryHealth.qml
+    qml/Cluster2W.qml
+    qml/Cluster4W.qml
+    qml/DevSimulator.qml
+    qml/qmldir
 )
 
 add_executable(ev-cluster

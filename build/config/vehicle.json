@@ -1,0 +1,7 @@
+{
+    "vehicle_id": "EV-PROTO-001",
+    "battery_capacity_kwh": 77.4,
+    "max_charge_power_kw": 250,
+    "max_regen_power_kw": 150,
+    "tire_diameter_mm": 680
+}
