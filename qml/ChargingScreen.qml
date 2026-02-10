@@ -1,319 +1,388 @@
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Shapes
+import QtQuick.Controls
 import "."
 
 Item {
     id: root
     anchors.fill: parent
     
-    // Auto-charging logic
-    Timer {
-        id: chargingTimer
-        interval: 1000 // Update every second
-        running: VehicleData.chargingActive && VehicleData.batterySoc < 100
-        repeat: true
-        onTriggered: {
-            // Increment SOC based on charging power
-            // Assuming ~7kW charging = ~1% per minute for 50kWh battery
-            var chargeRate = 0.0167; // ~1% per minute = 0.0167% per second
-            if (VehicleData.batterySoc < 100) {
-                VehicleData.batterySoc = Math.min(100, VehicleData.batterySoc + chargeRate);
-            }
-        }
-    }
+    // Properties bound to VehicleData
+    property bool active: VehicleData.chargingActive
+    property real soc: VehicleData.batterySoc
+    property real power: Math.abs(VehicleData.powerOutput)
+    property real batteryTemp: VehicleData.batteryTempAvg
     
+    // Time remaining calculation
+    property string timeRemaining: {
+        if (power < 1.0) return "--:--"
+        var kwhNeeded = (100 - soc) * 0.65
+        var hours = kwhNeeded / power
+        var h = Math.floor(hours)
+        var m = Math.floor((hours - h) * 60)
+        return h + "h " + m + "m"
+    }
+
     Rectangle {
         anchors.fill: parent
-        color: Style.background
+        color: "#050505"
+        
+        // ── Ambient Floating Particles ──
+        Repeater {
+            model: 12
+            Rectangle {
+                id: particle
+                width: 6 + Math.random() * 10
+                height: width
+                radius: width / 2
+                color: Style.accent
+                opacity: 0.0
+                x: parent.width * 0.2 + Math.random() * parent.width * 0.6
+                y: parent.height
+                
+                SequentialAnimation on y {
+                    running: active
+                    loops: Animation.Infinite
+                    PauseAnimation { duration: index * 400 }
+                    NumberAnimation {
+                        from: particle.parent ? particle.parent.height : 480
+                        to: -20
+                        duration: 3000 + Math.random() * 2000
+                        easing.type: Easing.OutQuad
+                    }
+                }
+                
+                SequentialAnimation on opacity {
+                    running: active
+                    loops: Animation.Infinite
+                    PauseAnimation { duration: index * 400 }
+                    NumberAnimation { to: 0.4; duration: 600 }
+                    NumberAnimation { to: 0.15; duration: 2000 }
+                    NumberAnimation { to: 0.0; duration: 400 }
+                    PauseAnimation { duration: 1000 }
+                }
+            }
+        }
         
         ColumnLayout {
             anchors.centerIn: parent
-            spacing: Style.spacing32
-            
-            // Animated Title with pulse
+            spacing: 16
+
+            // ── CHARGING Title ──
             Text {
-                text: "⚡ CHARGING ACTIVE"
+                text: "⚡ CHARGING"
                 color: Style.accent
-                font.pixelSize: 48
+                font.pixelSize: 36
                 font.bold: true
+                font.letterSpacing: 8
                 Layout.alignment: Qt.AlignHCenter
                 
                 SequentialAnimation on opacity {
-                    running: true
                     loops: Animation.Infinite
-                    NumberAnimation { to: 0.6; duration: 1200 }
-                    NumberAnimation { to: 1.0; duration: 1200 }
+                    NumberAnimation { from: 0.5; to: 1.0; duration: 1200; easing.type: Easing.InOutSine }
+                    NumberAnimation { from: 1.0; to: 0.5; duration: 1200; easing.type: Easing.InOutSine }
                 }
             }
-            
-            // Large Battery Graphic with Liquid Fill
+
+            // ── Battery Graphic ──
             Item {
-                width: 400
-                height: 200
+                id: batteryGraphic
+                Layout.preferredWidth: 320
+                Layout.preferredHeight: 160
                 Layout.alignment: Qt.AlignHCenter
                 
-                // Battery Outline
+                // Battery Body
                 Rectangle {
-                    id: batteryOutline
-                    width: 380
-                    height: 180
+                    id: batteryBody
+                    width: 280
+                    height: 140
                     anchors.centerIn: parent
                     color: "transparent"
-                    border.color: Style.textPrimary
-                    border.width: 4
-                    radius: 20
+                    border.color: "#555"
+                    border.width: 3
+                    radius: 16
                     
-                    // Liquid Fill with Wave Animation
+                    // Inner dark background
                     Rectangle {
-                        id: liquidFill
-                        anchors.left: parent.left
-                        anchors.bottom: parent.bottom
-                        anchors.margins: 8
-                        width: parent.width - 16
-                        height: (parent.height - 16) * (VehicleData.batterySoc / 100)
+                        anchors.fill: parent
+                        anchors.margins: 4
+                        color: "#111"
                         radius: 12
+                    }
+                    
+                    // ── Liquid Fill ──
+                    Item {
+                        id: fillArea
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        anchors.margins: 6
+                        height: (parent.height - 12) * Math.min(soc / 100.0, 1.0)
+                        clip: true
                         
-                        // Gradient fill
-                        gradient: Gradient {
-                            GradientStop { position: 0.0; color: Qt.lighter(Style.accent, 1.3) }
-                            GradientStop { position: 1.0; color: Style.accent }
+                        Behavior on height {
+                            NumberAnimation { duration: 800; easing.type: Easing.OutCubic }
                         }
                         
-                        // Smooth height animation
-                        Behavior on height {
-                            NumberAnimation {
-                                duration: 1000
-                                easing.type: Easing.OutCubic
+                        // Main fill gradient
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 10
+                            gradient: Gradient {
+                                GradientStop { position: 0.0; color: Qt.lighter(Style.accent, 1.4) }
+                                GradientStop { position: 0.5; color: Style.accent }
+                                GradientStop { position: 1.0; color: Qt.darker(Style.accent, 1.3) }
+                            }
+                        }
+
+                        // Wave effect overlay (top of liquid)
+                        Rectangle {
+                            id: wave1
+                            width: parent.width * 2
+                            height: 16
+                            y: -6
+                            radius: 8
+                            color: Qt.lighter(Style.accent, 1.6)
+                            opacity: 0.3
+                            
+                            NumberAnimation on x {
+                                running: active
+                                loops: Animation.Infinite
+                                from: -parent.width
+                                to: 0
+                                duration: 3000
+                                easing.type: Easing.InOutSine
                             }
                         }
                         
-                        // Shimmer effect overlay
                         Rectangle {
-                            anchors.fill: parent
-                            radius: parent.radius
+                            id: wave2
+                            width: parent.width * 2
+                            height: 12
+                            y: -3
+                            radius: 6
+                            color: Qt.lighter(Style.accent, 1.8)
+                            opacity: 0.2
+                            
+                            NumberAnimation on x {
+                                running: active
+                                loops: Animation.Infinite
+                                from: 0
+                                to: -parent.width
+                                duration: 2400
+                                easing.type: Easing.InOutSine
+                            }
+                        }
+                        
+                        // Shimmer sweep
+                        Rectangle {
+                            id: shimmer
+                            width: 60
+                            height: parent.height
+                            radius: 10
+                            opacity: 0.25
                             gradient: Gradient {
                                 orientation: Gradient.Horizontal
                                 GradientStop { position: 0.0; color: "transparent" }
-                                GradientStop { position: 0.5; color: Qt.rgba(1, 1, 1, 0.3) }
+                                GradientStop { position: 0.5; color: "white" }
                                 GradientStop { position: 1.0; color: "transparent" }
                             }
                             
-                            // Sliding shimmer animation
                             SequentialAnimation on x {
-                                running: VehicleData.chargingActive
+                                running: active
                                 loops: Animation.Infinite
-                                NumberAnimation { from: -parent.width; to: parent.width; duration: 2000 }
+                                NumberAnimation {
+                                    from: -60
+                                    to: fillArea.width + 60
+                                    duration: 2000
+                                    easing.type: Easing.InOutQuad
+                                }
+                                PauseAnimation { duration: 1500 }
+                            }
+                        }
+                        
+                        // Bubble particles inside liquid
+                        Repeater {
+                            model: 6
+                            Rectangle {
+                                width: 4 + Math.random() * 6
+                                height: width
+                                radius: width / 2
+                                color: "white"
+                                opacity: 0.3
+                                x: 20 + Math.random() * (fillArea.width - 40)
+                                
+                                SequentialAnimation on y {
+                                    running: active
+                                    loops: Animation.Infinite
+                                    PauseAnimation { duration: index * 600 }
+                                    NumberAnimation {
+                                        from: fillArea.height
+                                        to: 0
+                                        duration: 1500 + Math.random() * 1000
+                                    }
+                                }
+                                
+                                SequentialAnimation on opacity {
+                                    running: active
+                                    loops: Animation.Infinite
+                                    PauseAnimation { duration: index * 600 }
+                                    NumberAnimation { to: 0.5; duration: 300 }
+                                    NumberAnimation { to: 0.0; duration: 1200 }
+                                    PauseAnimation { duration: 500 }
+                                }
                             }
                         }
                     }
                     
-                    // Lightning Bolt Icon with Pulse
+                    // ── Lightning Bolt (centered on battery) ──
                     Text {
                         text: "⚡"
-                        font.pixelSize: 100
+                        font.pixelSize: 64
                         anchors.centerIn: parent
-                        color: Style.background
-                        z: 5
+                        color: "#FFFFFF"
+                        opacity: 0.9
+                        z: 10
                         
                         SequentialAnimation on scale {
-                            running: VehicleData.chargingActive
+                            running: active
                             loops: Animation.Infinite
-                            NumberAnimation { to: 1.3; duration: 800; easing.type: Easing.InOutSine }
-                            NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutSine }
+                            NumberAnimation { to: 1.25; duration: 600; easing.type: Easing.InOutSine }
+                            NumberAnimation { to: 0.95; duration: 600; easing.type: Easing.InOutSine }
                         }
                         
-                        SequentialAnimation on rotation {
-                            running: VehicleData.chargingActive
+                        SequentialAnimation on opacity {
+                            running: active
                             loops: Animation.Infinite
-                            NumberAnimation { to: -10; duration: 400 }
-                            NumberAnimation { to: 10; duration: 800 }
-                            NumberAnimation { to: 0; duration: 400 }
+                            NumberAnimation { from: 0.7; to: 1.0; duration: 400 }
+                            NumberAnimation { from: 1.0; to: 0.7; duration: 800 }
                         }
                     }
                 }
                 
-                // Battery Terminal
+                // Battery Terminal (positive nub on right)
                 Rectangle {
-                    width: 20
-                    height: 80
-                    anchors.left: batteryOutline.right
-                    anchors.leftMargin: -5
-                    anchors.verticalCenter: batteryOutline.verticalCenter
-                    color: Style.textPrimary
-                    radius: 5
+                    width: 14
+                    height: 50
+                    anchors.left: batteryBody.right
+                    anchors.leftMargin: -3
+                    anchors.verticalCenter: batteryBody.verticalCenter
+                    color: "#555"
+                    radius: 6
                 }
             }
-            
-            // Large SOC Display with Count-up Effect
+
+            // ── Big SoC Percentage ──
             Text {
-                text: VehicleData.batterySoc.toFixed(1) + "%"
-                color: Style.textPrimary
+                text: Math.round(soc) + "%"
+                color: "white"
                 font.pixelSize: 80
+                font.family: Style.monoFont
                 font.bold: true
                 Layout.alignment: Qt.AlignHCenter
             }
-            
-            // Charging Rate Indicator
+
+            // ── Animated Energy Flow Dots ──
             Row {
                 Layout.alignment: Qt.AlignHCenter
-                spacing: Style.spacing16
+                spacing: 12
                 
-                // Animated power flow particles
                 Repeater {
                     model: 5
                     Rectangle {
-                        width: 12
-                        height: 12
-                        radius: 6
+                        width: 10
+                        height: 10
+                        radius: 5
                         color: Style.accent
                         
                         SequentialAnimation on opacity {
-                            running: VehicleData.chargingActive
+                            running: active
                             loops: Animation.Infinite
-                            PauseAnimation { duration: index * 200 }
-                            NumberAnimation { to: 0.2; duration: 100 }
-                            NumberAnimation { to: 1.0; duration: 600 }
-                            NumberAnimation { to: 0.2; duration: 100 }
+                            PauseAnimation { duration: index * 180 }
+                            NumberAnimation { from: 0.15; to: 1.0; duration: 300; easing.type: Easing.OutQuad }
+                            NumberAnimation { from: 1.0; to: 0.15; duration: 500; easing.type: Easing.InQuad }
+                            PauseAnimation { duration: 200 }
                         }
                         
-                        SequentialAnimation on y {
-                            running: VehicleData.chargingActive
+                        SequentialAnimation on scale {
+                            running: active
                             loops: Animation.Infinite
-                            PauseAnimation { duration: index * 200 }
-                            NumberAnimation { from: 0; to: -20; duration: 800 }
+                            PauseAnimation { duration: index * 180 }
+                            NumberAnimation { from: 0.6; to: 1.4; duration: 300 }
+                            NumberAnimation { from: 1.4; to: 0.6; duration: 500 }
+                            PauseAnimation { duration: 200 }
                         }
                     }
                 }
             }
-            
-            // Stats Grid
+
+            // ── Stats Grid ──
             GridLayout {
-                columns: 2
-                rowSpacing: Style.spacing16
-                columnSpacing: Style.spacing48
+                columns: 3
+                rowSpacing: 12
+                columnSpacing: 40
                 Layout.alignment: Qt.AlignHCenter
                 
-                Text { 
-                    text: "Charging Power:" 
-                    color: Style.textSecondary 
-                    font.pixelSize: Style.fontSizeMedium 
-                }
-                Text { 
-                    text: (Math.abs(VehicleData.powerOutput) || 7.0).toFixed(1) + " kW"
-                    color: Style.accent
-                    font.pixelSize: Style.fontSizeMedium
-                    font.bold: true
+                // Power
+                Column {
+                    Text { text: "POWER"; color: "#666"; font.pixelSize: 12; font.letterSpacing: 2; anchors.horizontalCenter: parent.horizontalCenter }
+                    Text { text: power.toFixed(1) + " kW"; color: Style.accent; font.pixelSize: 28; font.family: Style.monoFont; font.bold: true; anchors.horizontalCenter: parent.horizontalCenter }
                 }
                 
-                Text { 
-                    text: "Battery Voltage:" 
-                    color: Style.textSecondary 
-                    font.pixelSize: Style.fontSizeMedium 
-                }
-                Text { 
-                    text: VehicleData.batteryVoltage.toFixed(0) + " V" 
-                    color: Style.textPrimary 
-                    font.pixelSize: Style.fontSizeMedium 
-                    font.bold: true
+                // Time Remaining
+                Column {
+                    Text { text: "REMAINING"; color: "#666"; font.pixelSize: 12; font.letterSpacing: 2; anchors.horizontalCenter: parent.horizontalCenter }
+                    Text { text: timeRemaining; color: "white"; font.pixelSize: 28; font.family: Style.monoFont; font.bold: true; anchors.horizontalCenter: parent.horizontalCenter }
                 }
                 
-                Text { 
-                    text: "Charging Current:" 
-                    color: Style.textSecondary 
-                    font.pixelSize: Style.fontSizeMedium 
-                }
-                Text { 
-                    text: (Math.abs(VehicleData.batteryCurrent) || 18.0).toFixed(1) + " A"
-                    color: Style.textPrimary 
-                    font.pixelSize: Style.fontSizeMedium 
-                    font.bold: true
-                }
-                
-                Text { 
-                    text: "Battery Temp:" 
-                    color: Style.textSecondary 
-                    font.pixelSize: Style.fontSizeMedium 
-                }
-                Text { 
-                    text: VehicleData.batteryTempAvg.toFixed(1) + " °C"
-                    color: VehicleData.batteryTempAvg > 35 ? Style.warning : Style.textPrimary
-                    font.pixelSize: Style.fontSizeMedium 
-                    font.bold: true
-                }
-                
-                Text { 
-                    text: "Time to Full:" 
-                    color: Style.textSecondary 
-                    font.pixelSize: Style.fontSizeMedium 
-                }
-                Text {
-                    text: {
-                        if (VehicleData.batterySoc >= 99.9) return "Complete!";
-                        var remaining = Math.max(0, 100 - VehicleData.batterySoc);
-                        var minutesRemaining = Math.round(remaining / 0.0167 / 60); // Based on charge rate
-                        var hours = Math.floor(minutesRemaining / 60);
-                        var mins = minutesRemaining % 60;
-                        return hours + "h " + mins + "m";
+                // Temperature
+                Column {
+                    Text { text: "BATTERY"; color: "#666"; font.pixelSize: 12; font.letterSpacing: 2; anchors.horizontalCenter: parent.horizontalCenter }
+                    Text {
+                        text: batteryTemp.toFixed(1) + "°C"
+                        color: batteryTemp > 40 ? Style.danger : batteryTemp > 35 ? Style.warning : "white"
+                        font.pixelSize: 28; font.family: Style.monoFont; font.bold: true
+                        anchors.horizontalCenter: parent.horizontalCenter
                     }
-                    color: Style.accent
-                    font.pixelSize: Style.fontSizeMedium 
-                    font.bold: true
                 }
             }
             
-            // Charging Complete Message (when 100%)
-            Rectangle {
-                visible: VehicleData.batterySoc >= 99.9
-                width: 500
-                height: 80
-                radius: 40
-                color: Style.accent
+            // ── Footer ──
+            Text {
+                text: "Vehicle immobilized · Charging cable connected"
+                color: "#333"
+                font.pixelSize: 12
                 Layout.alignment: Qt.AlignHCenter
-                
-                Text {
-                    anchors.centerIn: parent
-                    text: "✓ CHARGING COMPLETE"
-                    color: Style.background
-                    font.pixelSize: 32
-                    font.bold: true
-                }
-                
-                SequentialAnimation on scale {
-                    running: visible
-                    loops: Animation.Infinite
-                    NumberAnimation { to: 1.05; duration: 1000 }
-                    NumberAnimation { to: 1.0; duration: 1000 }
-                }
+                Layout.topMargin: 8
             }
         }
         
-        // Ambient Glow Effect (Corner particles)
+        // ── Corner Glow Orbs ──
         Repeater {
-            model: 8
+            model: 6
             Rectangle {
-                width: 40
-                height: 40
-                radius: 20
+                width: 30 + Math.random() * 30
+                height: width
+                radius: width / 2
                 color: Style.accent
-                opacity: 0.1
+                opacity: 0.0
                 x: Math.random() * parent.width
                 y: Math.random() * parent.height
                 
                 SequentialAnimation on opacity {
-                    running: VehicleData.chargingActive
+                    running: active
                     loops: Animation.Infinite
-                    PauseAnimation { duration: index * 300 }
-                    NumberAnimation { to: 0.3; duration: 2000; easing.type: Easing.InOutSine }
-                    NumberAnimation { to: 0.05; duration: 2000; easing.type: Easing.InOutSine }
+                    PauseAnimation { duration: index * 500 }
+                    NumberAnimation { to: 0.08; duration: 2500; easing.type: Easing.InOutSine }
+                    NumberAnimation { to: 0.02; duration: 2500; easing.type: Easing.InOutSine }
                 }
                 
                 SequentialAnimation on scale {
-                    running: VehicleData.chargingActive
+                    running: active
                     loops: Animation.Infinite
-                    PauseAnimation { duration: index * 300 }
-                    NumberAnimation { to: 2.0; duration: 2000 }
-                    NumberAnimation { to: 0.5; duration: 2000 }
+                    PauseAnimation { duration: index * 500 }
+                    NumberAnimation { to: 1.8; duration: 3000; easing.type: Easing.InOutSine }
+                    NumberAnimation { to: 0.8; duration: 3000; easing.type: Easing.InOutSine }
                 }
             }
         }

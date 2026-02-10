@@ -217,6 +217,35 @@ class MixedUrbanHighwayScenario(DrivingScenario):
         return "Normal"
 
 
+class ChargingScenario(DrivingScenario):
+    """Realistic charging scenario with different power levels"""
+    
+    def __init__(self, charge_power_kw=150.0):
+        mode_name = "DC Fast Charge"
+        if charge_power_kw < 2.0:
+            mode_name = "AC Level 1 Charge"
+        elif charge_power_kw < 20.0:
+            mode_name = "AC Level 2 Charge"
+            
+        super().__init__(mode_name, f"Charging at {charge_power_kw} kW", 3600)
+        self.charge_power = charge_power_kw
+        
+    def get_target_speed(self, t):
+        return 0.0  # Vehicle must be stopped
+    
+    def get_power_range(self):
+        return (-self.charge_power, -self.charge_power)
+    
+    def get_acceleration_rate(self):
+        return 0.0
+    
+    def get_drive_mode(self):
+        return "Park"
+
+    def get_charge_power(self):
+        return self.charge_power
+
+
 class PhysicsEngine:
     """Realistic EV physics calculations with smooth behavior"""
     
@@ -360,6 +389,9 @@ class EVSimulator:
         self.current_scenario.reset()
         self.drive_mode = scenario.get_drive_mode()
         self.max_accel_rate = scenario.get_acceleration_rate()
+        # Reset charging flag when switching to driving scenario
+        if not isinstance(scenario, ChargingScenario):
+            self.charging = False
         
     def smooth_transition(self, current, target, rate, dt):
         """Smooth transition between values"""
@@ -408,7 +440,42 @@ class EVSimulator:
         self.motor_rpm = self.smooth_transition(self.motor_rpm, target_rpm, 500, dt)
         
         # Power consumption calculation
-        if self.charging:
+        if isinstance(self.current_scenario, ChargingScenario):
+            self.charging = True
+            self.drive_mode = "Park"
+            self.speed = 0.0  # Enforce stopped
+            self.motor_rpm = 0.0
+            
+            # Realistic charging curve tapering
+            # Full power up to 80%, then taper linearly to ~10% power at 100%
+            base_power = self.current_scenario.get_charge_power()
+            if self.soc >= 100.0:
+                # Fully charged, stop
+                target_power = 0.0
+            elif self.soc > 80.0:
+                # Taper: from 100% power at 80% SoC to 10% power at 100% SoC
+                taper_factor = 1.0 - 0.9 * ((self.soc - 80.0) / 20.0)
+                target_power = -base_power * max(0.1, taper_factor)
+            else:
+                target_power = -base_power
+            
+            # Smoothly ramp up/down charging power
+            self.power = self.smooth_transition(self.power, target_power, 20, dt)
+            
+            # Add energy
+            energy_added = abs(self.power) * (dt / 3600.0)
+            self.soc += (energy_added / self.battery_capacity) * 100.0
+            
+            # Heat generation (I^2*R logic simplified)
+            heat_factor = abs(self.power) / 10.0
+            self.battery_temp += 0.05 * heat_factor * dt
+            
+            # Active thermal management cooling
+            if self.battery_temp > 35.0:
+                self.battery_temp -= 0.1 * dt
+                
+        elif self.charging:
+             # Legacy or manual charging flag
             self._update_charging(dt)
         elif is_decelerating and decel_rate > 0.5:
             # Regenerative braking
@@ -624,7 +691,10 @@ class SimulatorGUI:
             "Highway Cruise": HighwayCruiseScenario(),
             "Eco Mode": EcoModeScenario(),
             "Spirited Drive": SpiritedDriveScenario(),
-            "Mixed Urban/Highway": MixedUrbanHighwayScenario()
+            "Mixed Urban/Highway": MixedUrbanHighwayScenario(),
+            "AC Charge (Level 1)": ChargingScenario(1.4),
+            "AC Charge (Level 2)": ChargingScenario(7.2),
+            "DC Fast Charge": ChargingScenario(150.0)
         }
         
         self._create_widgets()
