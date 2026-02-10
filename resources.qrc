@@ -1,5 +1,23 @@
 <RCC>
     <qresource prefix="/">
         <file>qml/main.qml</file>
+        <file>qml/Style.qml</file>
+        <file>qml/Speedometer.qml</file>
+        <file>qml/PowerMeter.qml</file>
+        <file>qml/BatteryDisplay.qml</file>
+        <file>qml/ChargingScreen.qml</file>
+        <file>qml/MapView.qml</file>
+        <file>qml/WarningLights.qml</file>
+        <file>qml/WarningOverlay.qml</file>
+        <file>qml/TripComputer.qml</file>
+        <file>qml/GaugeCluster.qml</file>
+        <file>qml/BatteryHealth.qml</file>
+        <file>qml/Cluster2W.qml</file>
+        <file>qml/Cluster4W.qml</file>
+        <file>qml/DevSimulator.qml</file>
+        <file>qml/EfficiencyGraph.qml</file>
+        <file>qml/ChargingStationMarker.qml</file>
+        <file>qml/Settings.qml</file>
+        <file>qml/qmldir</file>
     </qresource>
 </RCC>
