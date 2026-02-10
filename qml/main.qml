@@ -95,16 +95,6 @@ Window {
         }
     }
     
-    // Dev Simulator Window - DISABLED (use Python simulator only)
-    // Uncomment below to re-enable for debugging
-    /*
-    DevSimulator {
-        id: devSim
-        visible: false
-        onBikeModeToggled: (active) => root.isBike = active
-    }
-    */
-    
     // Dev Simulator removed - use Python simulator only
     
     // Keyboard Shortcuts

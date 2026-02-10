@@ -63,6 +63,7 @@ class EVVehicleData : public QObject
     Q_PROPERTY(bool low12V READ low12V WRITE setLow12V NOTIFY low12VChanged)
     
     // Navigation Data
+    Q_PROPERTY(bool navigationActive READ navigationActive WRITE setNavigationActive NOTIFY navigationActiveChanged)
     Q_PROPERTY(QString nextTurnIcon READ nextTurnIcon WRITE setNextTurnIcon NOTIFY nextTurnIconChanged)
     Q_PROPERTY(QString nextTurnDistance READ nextTurnDistance WRITE setNextTurnDistance NOTIFY nextTurnDistanceChanged)
     Q_PROPERTY(QString destinationEta READ destinationEta WRITE setDestinationEta NOTIFY destinationEtaChanged)
@@ -142,6 +143,7 @@ public:
     float heading() const { return m_heading; }
     bool nightMode() const { return m_nightMode; }
     bool fullScreenMap() const { return m_fullScreenMap; }
+    bool navigationActive() const { return m_navigationActive; }
 
 public slots:
     // Setters
@@ -192,6 +194,7 @@ public slots:
     void setHeading(float heading);
     void setNightMode(bool nightMode);
     void setFullScreenMap(bool fullScreenMap);
+    void setNavigationActive(bool navigationActive);
 
     // Simulation helper
     void updateFromSimulation(const QVariantMap& data);
@@ -244,6 +247,7 @@ signals:
     void headingChanged();
     void nightModeChanged();
     void fullScreenMapChanged();
+    void navigationActiveChanged();
 
 
 private:
@@ -295,6 +299,7 @@ private:
     float m_heading = 0.0f;
     bool m_nightMode = true; // Default to night/dark mode
     bool m_fullScreenMap = false;
+    bool m_navigationActive = false;
     
     // Range calculation smoothing
     float m_previousRange = 0.0f;

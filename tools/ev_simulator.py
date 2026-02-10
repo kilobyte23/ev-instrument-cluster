@@ -788,10 +788,40 @@ class EVSimulator:
             if self.battery_temp > battery_ambient:
                 self.battery_temp -= 0.08 * dt
         
-        # Clamp temperatures (wide limits to allow overheat scenarios)
-        self.motor_temp = max(20.0, min(120.0, self.motor_temp))
-        self.battery_temp = max(15.0, min(60.0, self.battery_temp))
         
+        # Clamp temperatures (wide limits to allow overheat scenarios)
+        self.motor_temp = max(20.0, min(150.0, self.motor_temp)) # Allow higher for failure simulation
+        self.battery_temp = max(15.0, min(90.0, self.battery_temp))
+        
+        # CRITICAL: Thermal Shutdown Logic
+        if self.motor_temp > 130.0 or self.battery_temp > 70.0:
+            self.hv_fault = True
+            self.motor_fault = True
+            
+        # CRITICAL: SoC Clamping & Dead Battery
+        if self.soc <= 0.0:
+            self.soc = 0.0
+            self.power = 0.0
+            self.target_speed = 0.0
+            self.speed = self.smooth_transition(self.speed, 0.0, 2.0, dt) # Coast to stop
+        elif self.soc > 100.0:
+            self.soc = 100.0
+            
+        # CRITICAL: Prevent Infinite Regen (Overcharging)
+        if self.soc >= 100.0 and self.power < 0:
+            self.power = 0.0 # Cut regen/charging at 100%
+            
+        # CRITICAL: Fault Enforcement
+        if self.hv_fault:
+            self.power = 0.0
+            self.target_speed = 0.0
+            # Mechanical brakes or coasting
+            self.speed = self.smooth_transition(self.speed, 0.0, 3.0, dt)
+        elif self.motor_fault:
+             # Limp Mode
+            self.max_power = 20.0 # Severely limited power
+            self.target_speed = min(self.target_speed, 30.0)
+
         # Update odometer and trip distance
         if self.speed > 0:
             distance_km = self.speed * (dt / 3600.0)

@@ -14,6 +14,14 @@ void EVVehicleData::setSpeed(float speed)
     emit speedChanged();
 }
 
+void EVVehicleData::setNavigationActive(bool navigationActive)
+{
+    if (m_navigationActive == navigationActive)
+        return;
+    m_navigationActive = navigationActive;
+    emit navigationActiveChanged();
+}
+
 
 
 void EVVehicleData::setOdometer(float odometer)
@@ -445,7 +453,7 @@ void EVVehicleData::updateFromSimulation(const QVariantMap& data)
     
     // Nav
     if (data.contains("next_turn_dist")) setNextTurnDistance(data["next_turn_dist"].toString());
-    if (data.contains("nav_active")) { /* TODO state */ }
+    if (data.contains("nav_active")) setNavigationActive(data["nav_active"].toBool());
     
     // GPS
     if (data.contains("lat")) setGpsLatitude(data["lat"].toDouble());
