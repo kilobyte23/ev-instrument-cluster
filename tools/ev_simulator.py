@@ -246,6 +246,212 @@ class ChargingScenario(DrivingScenario):
         return self.charge_power
 
 
+
+
+class AggressiveDriverScenario(DrivingScenario):
+    """Dangerous driving: rapid bursts to 160+ km/h, hard braking, erratic"""
+    
+    def __init__(self):
+        super().__init__("Aggressive Driver", "Reckless high-speed driving with hard braking", 300)
+    
+    def get_target_speed(self, t):
+        cycle = t % 40
+        if cycle < 8:
+            return 160 + 20 * math.sin(t * 0.5)  # Wild burst to 160-180
+        elif cycle < 12:
+            return 20  # Slam brakes
+        elif cycle < 20:
+            return 140 + 10 * math.sin(t * 0.8)
+        elif cycle < 25:
+            return 5  # Emergency stop
+        elif cycle < 35:
+            return 130 + 30 * math.sin(t * 0.3)
+        else:
+            return 60  # Brief calm
+    
+    def get_power_range(self):
+        return (50, 200)
+    
+    def get_acceleration_rate(self):
+        return 12.0  # Very aggressive accel
+    
+    def get_drive_mode(self):
+        return "Sport"
+    
+    def update(self, dt):
+        super().update(dt)
+        # Trigger ABS and TC intermittently during hard braking
+    
+    def apply_initial_state(self, sim):
+        sim.seatbelt_warning = True  # Driver didn't buckle up
+        sim.soc = 80.0
+
+
+class BatteryOverheatScenario(DrivingScenario):
+    """Battery temperature rises dangerously during moderate driving"""
+    
+    def __init__(self):
+        super().__init__("Battery Overheat", "Battery thermal runaway risk", 300)
+        self._overheat_started = False
+    
+    def get_target_speed(self, t):
+        # Moderate highway speed — the heat comes from the battery, not driving
+        return 80 + 10 * math.sin(t * 0.15)
+    
+    def get_power_range(self):
+        return (15, 40)
+    
+    def get_acceleration_rate(self):
+        return 3.0
+    
+    def apply_initial_state(self, sim):
+        sim.battery_temp = 38.0  # Start already warm
+        sim.soc = 60.0
+
+    def update(self, dt):
+        super().update(dt)
+        self._overheat_started = self.elapsed_time > 5
+
+    def get_temp_boost(self):
+        """Extra heat injected per update tick"""
+        if not self._overheat_started:
+            return 0.0
+        # Ramp: 0.3°C/s initially, accelerating
+        t = self.elapsed_time - 5
+        return 0.3 + min(t * 0.005, 0.5)  # Caps at 0.8°C/s
+
+
+class MotorOverheatScenario(DrivingScenario):
+    """Sustained hill climb causing motor overheat"""
+    
+    def __init__(self):
+        super().__init__("Motor Overheat", "Sustained hill climb overheating motor", 300)
+    
+    def get_target_speed(self, t):
+        # Steady climb speed with occasional terrain changes
+        return 60 + 5 * math.sin(t * 0.1)
+    
+    def get_power_range(self):
+        return (40, 100)  # High sustained load
+    
+    def get_acceleration_rate(self):
+        return 2.0
+    
+    def get_drive_mode(self):
+        return "Sport"
+    
+    def apply_initial_state(self, sim):
+        sim.motor_temp = 60.0  # Already warm from driving
+        sim.soc = 70.0
+    
+    def get_temp_boost(self):
+        """Extra motor heat per update tick"""
+        if self.elapsed_time < 3:
+            return 0.0
+        t = self.elapsed_time - 3
+        return 0.4 + min(t * 0.003, 0.3)  # Ramps to 0.7°C/s
+
+
+class DegradedBatteryScenario(DrivingScenario):
+    """Old battery with low SoH — reduced range, warning flags"""
+    
+    def __init__(self):
+        super().__init__("Degraded Battery", "Aged battery with low health", 300)
+    
+    def get_target_speed(self, t):
+        # Normal city driving
+        cycle = t % 50
+        if cycle < 15:
+            return 50
+        elif cycle < 20:
+            return 0
+        elif cycle < 35:
+            return 60
+        else:
+            return 30
+    
+    def get_power_range(self):
+        return (5, 25)
+    
+    def get_acceleration_rate(self):
+        return 3.0
+
+    def apply_initial_state(self, sim):
+        sim.soh = 65.0  # Low health — triggers warning overlay
+        sim.soc = 55.0
+        sim.battery_temp = 28.0
+
+
+class CriticalLowBatteryScenario(DrivingScenario):
+    """Driving at high speed with critically low battery"""
+    
+    def __init__(self):
+        super().__init__("Critical Low Battery", "Low battery at highway speed", 180)
+    
+    def get_target_speed(self, t):
+        # Start fast, gradually forced to slow as battery dies
+        if t < 60:
+            return 100  # Still pushing hard
+        elif t < 120:
+            return 70  # Realizing the problem
+        else:
+            return 40  # Turtle mode
+    
+    def get_power_range(self):
+        return (20, 60)
+    
+    def get_acceleration_rate(self):
+        return 4.0
+
+    def apply_initial_state(self, sim):
+        sim.soc = 8.0  # Critically low!
+        sim.soh = 92.0
+        sim.battery_temp = 26.0
+
+
+class HVSystemFaultScenario(DrivingScenario):
+    """HV isolation fault during highway driving — limp mode"""
+    
+    def __init__(self):
+        super().__init__("HV System Fault", "HV isolation failure mid-drive", 180)
+        self._fault_triggered = False
+    
+    def get_target_speed(self, t):
+        if t < 30:
+            return 90  # Normal cruising
+        elif t < 35:
+            return 90  # Fault happens at t=30
+        elif t < 60:
+            return 30  # Limp mode — max 30 km/h
+        else:
+            return 0  # Pull over and stop
+    
+    def get_power_range(self):
+        return (5, 30)
+    
+    def get_acceleration_rate(self):
+        return 2.0
+    
+    def get_drive_mode(self):
+        return "Normal"
+    
+    def update(self, dt):
+        super().update(dt)
+        if self.elapsed_time >= 30 and not self._fault_triggered:
+            self._fault_triggered = True
+    
+    def is_fault_active(self):
+        return self._fault_triggered
+
+    def apply_initial_state(self, sim):
+        sim.soc = 60.0
+        sim.battery_temp = 25.0
+
+    def reset(self):
+        super().reset()
+        self._fault_triggered = False
+
+
 class PhysicsEngine:
     """Realistic EV physics calculations with smooth behavior"""
     
@@ -367,6 +573,13 @@ class EVSimulator:
         self.drive_mode = "Normal"
         self.ready = True
         
+        # Warning / fault state variables
+        self.hv_fault = False
+        self.motor_fault = False
+        self.abs_active = False
+        self.tc_active = False
+        self.seatbelt_warning = False
+        
         # Smoothing variables
         self.prev_speed = 0.0
         self.prev_power = 0.0
@@ -392,6 +605,15 @@ class EVSimulator:
         # Reset charging flag when switching to driving scenario
         if not isinstance(scenario, ChargingScenario):
             self.charging = False
+        # Reset fault flags
+        self.hv_fault = False
+        self.motor_fault = False
+        self.abs_active = False
+        self.tc_active = False
+        self.seatbelt_warning = False
+        # Apply scenario-specific initial state
+        if hasattr(scenario, 'apply_initial_state'):
+            scenario.apply_initial_state(self)
         
     def smooth_transition(self, current, target, rate, dt):
         """Smooth transition between values"""
@@ -411,6 +633,31 @@ class EVSimulator:
             self.target_speed = self.current_scenario.get_target_speed(
                 self.current_scenario.elapsed_time
             )
+            
+        # Limp mode capping for HV System Fault
+        if isinstance(self.current_scenario, HVSystemFaultScenario):
+            self.hv_fault = self.current_scenario.is_fault_active()
+            if self.hv_fault:
+                self.target_speed = min(self.target_speed, 30.0)
+                self.motor_fault = True  # Show motor fault too during HV fault
+        
+        # ABS/TC flags for Aggressive Driver
+        if isinstance(self.current_scenario, AggressiveDriverScenario):
+            # Trigger ABS during hard deceleration
+            if is_decelerating and decel_rate > 8.0:
+                self.abs_active = True
+            else:
+                self.abs_active = False
+            
+            # Trigger TC during hard acceleration
+            speed_accel = (self.speed - self.prev_speed) / dt if dt > 0 else 0
+            if is_accelerating and speed_accel > 10.0:
+                self.tc_active = True
+            else:
+                self.tc_active = False
+        else:
+            self.abs_active = False
+            self.tc_active = False
         
         # CRITICAL: Smooth speed transition (no sudden jumps)
         speed_diff = self.target_speed - self.speed
@@ -515,6 +762,14 @@ class EVSimulator:
             # Gradual battery temp increase (slower)
             if self.power > 20:
                 self.battery_temp += 0.15 * dt
+                
+        # Scenario-specific temperature boosts (Overheat scenarios)
+        if hasattr(self.current_scenario, 'get_temp_boost'):
+            boost = self.current_scenario.get_temp_boost()
+            if isinstance(self.current_scenario, BatteryOverheatScenario):
+                self.battery_temp += boost * dt
+            elif isinstance(self.current_scenario, MotorOverheatScenario):
+                self.motor_temp += boost * dt
         else:
             # Idle
             target_power = 1.0  # Stable idle power
@@ -533,9 +788,9 @@ class EVSimulator:
             if self.battery_temp > battery_ambient:
                 self.battery_temp -= 0.08 * dt
         
-        # Clamp temperatures (smooth limits)
-        self.motor_temp = max(25.0, min(90.0, self.motor_temp))
-        self.battery_temp = max(20.0, min(35.0, self.battery_temp))
+        # Clamp temperatures (wide limits to allow overheat scenarios)
+        self.motor_temp = max(20.0, min(120.0, self.motor_temp))
+        self.battery_temp = max(15.0, min(60.0, self.battery_temp))
         
         # Update odometer and trip distance
         if self.speed > 0:
@@ -605,8 +860,8 @@ class EVSimulator:
             'battery_temp': round(self.battery_temp, 1),
             'motor_temp': round(self.motor_temp, 1),
             'range': round(self.range, 1),
-            'odometer': round(self.odometer * 1000, 1),  # Convert km to meters for UI
-            'trip_distance_a': round(self.trip_distance, 2),  # Trip A in km
+            'odometer': round(self.odometer * 1000, 1),
+            'trip_distance_a': round(self.trip_distance, 2),
             'efficiency': round(self.efficiency, 0),
             'ready': self.ready,
             'charging': self.charging,
@@ -614,7 +869,17 @@ class EVSimulator:
             'lat': round(self.lat, 6),
             'lon': round(self.lon, 6),
             'heading': round(self.heading, 1),
-            'next_turn_dist': "500m"
+            'next_turn_dist': "500m",
+            # Auto-computed warning flags from physical state
+            'bms_warning': self.battery_temp > 45 or self.soc < 5 or self.soh < 75,
+            'hv_warning': self.hv_fault,
+            'temp_warning': self.battery_temp > 42 or self.motor_temp > 75,
+            'motor_fault': self.motor_temp > 85 or self.motor_fault,
+            'reduced_power': (self.battery_temp > 45 or self.motor_temp > 80
+                              or self.soc < 10 or self.hv_fault),
+            'abs': self.abs_active,
+            'tc': self.tc_active,
+            'seatbelt': self.seatbelt_warning,
         }
 
 
@@ -694,7 +959,14 @@ class SimulatorGUI:
             "Mixed Urban/Highway": MixedUrbanHighwayScenario(),
             "AC Charge (Level 1)": ChargingScenario(1.4),
             "AC Charge (Level 2)": ChargingScenario(7.2),
-            "DC Fast Charge": ChargingScenario(150.0)
+            "DC Fast Charge": ChargingScenario(150.0),
+            "─── Edge Cases ───": None,
+            "Aggressive Driver": AggressiveDriverScenario(),
+            "Battery Overheat": BatteryOverheatScenario(),
+            "Motor Overheat": MotorOverheatScenario(),
+            "Degraded Battery": DegradedBatteryScenario(),
+            "Critical Low Battery": CriticalLowBatteryScenario(),
+            "HV System Fault": HVSystemFaultScenario(),
         }
         
         self._create_widgets()
@@ -815,7 +1087,11 @@ class SimulatorGUI:
         
     def _start_simulation(self):
         scenario_name = self.scenario_var.get()
-        scenario = self.scenarios[scenario_name]
+        scenario = self.scenarios.get(scenario_name)
+        
+        if scenario is None:
+            return  # Safety for separator or invalid selection
+            
         scenario.reset()
         self.controller.start_scenario(scenario)
         
